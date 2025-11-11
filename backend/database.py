@@ -6,24 +6,31 @@ from typing import List, Dict, Any
 # Load environment variables from .env file
 load_dotenv()
 
-# Read database connection details from .env
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_PORT = int(os.getenv('DB_PORT', 5432))
-DB_NAME = os.getenv('DB_NAME')
-DB_USER = os.getenv('DB_USER', 'postgres')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
-
-if not DB_NAME or not DB_PASSWORD:
-    raise ValueError("DB_NAME and DB_PASSWORD must be set in .env file")
-
 # Create connection pool
 _pool: asyncpg.Pool = None
+
+
+def _get_db_config():
+    """Get database configuration from environment variables."""
+    DB_HOST = os.getenv('DB_HOST', 'localhost')
+    DB_PORT = int(os.getenv('DB_PORT', 5432))
+    DB_NAME = os.getenv('DB_NAME')
+    DB_USER = os.getenv('DB_USER', 'postgres')
+    DB_PASSWORD = os.getenv('DB_PASSWORD')
+    
+    if not DB_NAME or not DB_PASSWORD:
+        raise ValueError("DB_NAME and DB_PASSWORD must be set in .env file")
+    
+    return DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
 
 async def get_pool() -> asyncpg.Pool:
     """Get or create the database connection pool."""
     global _pool
     if _pool is None:
+        # Get database config (will raise error if not set)
+        DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD = _get_db_config()
+        
         _pool = await asyncpg.create_pool(
             host=DB_HOST,
             port=DB_PORT,
@@ -99,7 +106,11 @@ async def fetch_schema() -> str:
 async def execute_query(sql_query: str) -> List[Dict[str, Any]]:
     """
     Execute a read-only SQL query using asyncpg pool and return results as a list of dictionaries.
+    Converts Decimal types to float for JSON serialization.
     """
+    from decimal import Decimal
+    import datetime
+    
     pool = await get_pool()
     
     async with pool.acquire() as connection:
@@ -108,7 +119,18 @@ async def execute_query(sql_query: str) -> List[Dict[str, Any]]:
         # Convert rows to list of dictionaries
         results = []
         for row in rows:
-            results.append(dict(row))
+            row_dict = {}
+            for key, value in dict(row).items():
+                # Convert Decimal to float for JSON serialization
+                if isinstance(value, Decimal):
+                    row_dict[key] = float(value)
+                # Convert datetime objects to ISO format strings
+                elif isinstance(value, (datetime.datetime, datetime.date)):
+                    row_dict[key] = value.isoformat()
+                # Keep other types as-is
+                else:
+                    row_dict[key] = value
+            results.append(row_dict)
         
         return results
 

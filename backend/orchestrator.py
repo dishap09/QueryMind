@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from backend.database import fetch_schema, execute_query
 from backend.vector_store import semantic_search
+from backend.tools import wikipedia_lookup, get_definition
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +27,7 @@ class QueryState(TypedDict):
     visualization_config: Optional[dict]
     memory_context: dict
     db_schema: str
+    error: Optional[str]
 
 
 async def router_agent(state: QueryState) -> QueryState:
@@ -39,6 +41,25 @@ async def router_agent(state: QueryState) -> QueryState:
     query = state.get('query', '')
     memory_context = state.get('memory_context', {})
     
+    # Fast path: Check for analytical keywords first (before LLM call)
+    # This ensures queries like "Top 5 highest products" are always classified as analytical
+    query_lower = query.lower()
+    analytical_keywords = [
+        'top', 'highest', 'lowest', 'most', 'least', 'best', 'worst',
+        'count', 'sum', 'average', 'total', 'list', 'show me', 'number of',
+        'how many', 'which', 'what are', 'expensive', 'cheap', 'sellers by',
+        'products by', 'orders by', 'revenue', 'sales'
+    ]
+    
+    # Check if query contains analytical keywords
+    if any(keyword in query_lower for keyword in analytical_keywords):
+        # Additional check: make sure it's not a tool query (definitions, translations)
+        tool_indicators = ['what is', 'what does', 'define', 'meaning of', 'translate']
+        if not any(indicator in query_lower for indicator in tool_indicators):
+            print(f"Fast path: Classifying query as analytical based on keywords: {query}")
+            state['intent'] = 'analytical'
+            return state
+    
     # Create detailed prompt for intent classification
     prompt = f"""You are an intent classification system for a Brazilian e-commerce database query system.
 
@@ -47,14 +68,30 @@ Your task is to classify the user's query into one of four intents based on the 
 INTENT CATEGORIES:
 
 1. **analytical**: Queries that require SQL database queries to retrieve numerical data, aggregations, rankings, or statistical information.
-   Examples:
-   - "Top 5 best selling products"
-   - "Total sales last month"
-   - "Average customer review score"
-   - "Show me revenue by state"
-   - "What are the most expensive orders?"
-   - "Count orders by payment type"
-   - "Revenue trends over time"
+   
+   CRITICAL: If the query contains ANY of these keywords, it MUST be classified as analytical:
+   - "top", "highest", "lowest", "most", "least", "best", "worst"
+   - "count", "sum", "average", "total", "number of", "list"
+   - "show me", "what are", "which", "how many"
+   - Any query asking for rankings, aggregations, or comparisons
+   
+   Examples (ALL of these are analytical):
+   - "Top 5 best selling products" -> analytical
+   - "Top 10 products with highest prices" -> analytical
+   - "Top 5 highest products" -> analytical (MUST be analytical)
+   - "Top 5 products" -> analytical (MUST be analytical)
+   - "Show me top 10 products by sales" -> analytical
+   - "Total sales last month" -> analytical
+   - "Average customer review score" -> analytical
+   - "Show me revenue by state" -> analytical
+   - "What are the most expensive orders?" -> analytical
+   - "Count orders by payment type" -> analytical
+   - "Revenue trends over time" -> analytical
+   - "Products with highest prices" -> analytical
+   - "Highest products" -> analytical (MUST be analytical)
+   - "Top N products" (where N is any number) -> analytical (MUST be analytical)
+   - "List the top 10 sellers by number of orders" -> analytical (MUST be analytical)
+   - "Show me the top 5 most expensive products" -> analytical (MUST be analytical)
    
 2. **semantic**: Queries that require semantic search or RAG (Retrieval Augmented Generation) to find information based on meaning, context, or qualitative descriptions.
    Examples:
@@ -102,13 +139,16 @@ Return only the JSON object, no additional text or markdown formatting."""
 
     try:
         # Initialize the Gemini model
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Generate response
         response = model.generate_content(prompt)
         
         # Extract text from response
         response_text = response.text.strip()
+        
+        # Debug: Print raw response
+        print(f"Router agent raw response: {response_text[:500]}")
         
         # Remove markdown code blocks if present
         if response_text.startswith('```json'):
@@ -122,17 +162,41 @@ Return only the JSON object, no additional text or markdown formatting."""
         # Parse JSON response
         parsed_response = json.loads(response_text)
         
+        # Debug: Print parsed intent
+        intent = parsed_response.get('intent', 'conversational')
+        print(f"Router agent classified intent: {intent} for query: {query}")
+        
         # Update state with the classified intent
-        state['intent'] = parsed_response.get('intent', 'conversational')
+        state['intent'] = intent
         
     except json.JSONDecodeError as e:
         # Fallback to conversational if JSON parsing fails
-        print(f"Error parsing JSON response: {e}")
-        state['intent'] = 'conversational'
+        print(f"Error parsing JSON response in router_agent: {e}")
+        try:
+            print(f"Response text was: {response_text[:200]}")
+        except:
+            print("Could not print response text")
+        # If query contains analytical keywords, force analytical intent
+        query_lower = query.lower()
+        analytical_keywords = ['top', 'highest', 'lowest', 'most', 'least', 'best', 'worst', 'count', 'sum', 'average', 'total', 'list', 'show me', 'number of']
+        if any(keyword in query_lower for keyword in analytical_keywords):
+            print(f"Force-setting intent to analytical based on keywords in query: {query}")
+            state['intent'] = 'analytical'
+        else:
+            state['intent'] = 'conversational'
     except Exception as e:
         # Fallback to conversational on any error
-        print(f"Error in router_agent: {e}")
-        state['intent'] = 'conversational'
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error in router_agent: {error_trace}")
+        # If query contains analytical keywords, force analytical intent
+        query_lower = query.lower()
+        analytical_keywords = ['top', 'highest', 'lowest', 'most', 'least', 'best', 'worst', 'count', 'sum', 'average', 'total', 'list', 'show me', 'number of']
+        if any(keyword in query_lower for keyword in analytical_keywords):
+            print(f"Force-setting intent to analytical based on keywords after error: {query}")
+            state['intent'] = 'analytical'
+        else:
+            state['intent'] = 'conversational'
     
     return state
 
@@ -153,15 +217,68 @@ async def analytical_agent(state: QueryState) -> QueryState:
 
 Write a single, valid PostgreSQL query to answer this user question: {query}
 
-When joining products, also join product_category_translation on product_category_name to get English names.
+IMPORTANT RULES:
+1. When joining products, also join product_category_translation on product_category_name to get English names.
+2. When calculating price, revenue, or sales, use the price column from order_items table.
+3. For "top N" queries, use ORDER BY with DESC and LIMIT N.
+4. For sales calculations, SUM the price from order_items grouped by product.
+5. Always include product_id and product information when querying products.
+6. Use proper JOINs: order_items -> products, order_items -> orders, products -> product_category_translation.
+7. **CRITICAL**: When the query mentions "highest products", "top products", or just "products" without specifying what metric, DEFAULT TO HIGHEST PRICES. Use MAX(oi.price) or AVG(oi.price) per product.
+8. For "highest products" or ambiguous "top products" queries, join order_items to get prices and group by product to find the highest priced products.
+9. Handle NULL values appropriately - use COALESCE or WHERE clauses to filter NULLs when needed.
+10. Always use LEFT JOIN for product_category_translation since some products might not have translations.
 
-When calculating price or revenue, use the price column from order_items.
+Examples:
 
-Return ONLY the SQL string."""
+Example 1 - "top 10 products by sales":
+SELECT 
+    p.product_id,
+    p.product_category_name,
+    t.product_category_name_english,
+    SUM(oi.price) as total_sales
+FROM order_items oi
+JOIN products p ON oi.product_id = p.product_id
+LEFT JOIN product_category_translation t ON p.product_category_name = t.product_category_name
+GROUP BY p.product_id, p.product_category_name, t.product_category_name_english
+ORDER BY total_sales DESC
+LIMIT 10;
+
+Example 2 - "top 5 highest products" or "top 5 products" (ambiguous, default to prices):
+SELECT 
+    p.product_id,
+    p.product_category_name,
+    t.product_category_name_english,
+    MAX(oi.price) as highest_price,
+    AVG(oi.price) as avg_price
+FROM order_items oi
+JOIN products p ON oi.product_id = p.product_id
+LEFT JOIN product_category_translation t ON p.product_category_name = t.product_category_name
+WHERE oi.price IS NOT NULL
+GROUP BY p.product_id, p.product_category_name, t.product_category_name_english
+ORDER BY highest_price DESC
+LIMIT 5;
+
+Example 3 - "products with highest prices":
+SELECT 
+    p.product_id,
+    p.product_category_name,
+    t.product_category_name_english,
+    MAX(oi.price) as max_price,
+    COUNT(oi.order_item_id) as order_count
+FROM order_items oi
+JOIN products p ON oi.product_id = p.product_id
+LEFT JOIN product_category_translation t ON p.product_category_name = t.product_category_name
+WHERE oi.price IS NOT NULL
+GROUP BY p.product_id, p.product_category_name, t.product_category_name_english
+ORDER BY max_price DESC
+LIMIT 10;
+
+Return ONLY the SQL string, no explanations, no markdown code blocks."""
 
     try:
         # Initialize the Gemini model
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Generate response
         response = model.generate_content(prompt)
@@ -178,20 +295,51 @@ Return ONLY the SQL string."""
             sql_query = sql_query[:-3]
         sql_query = sql_query.strip()
         
+        # Remove any trailing semicolons and trim
+        sql_query = sql_query.rstrip(';').strip()
+        
+        # Log the generated SQL for debugging
+        print(f"Generated SQL query: {sql_query}")
+        
         # Save SQL query to state
         state['sql_query'] = sql_query
         
         # Execute the query
         results = await execute_query(sql_query)
         
+        # Ensure results is always a list (never None)
+        if results is None:
+            results = []
+        
+        # Log results count for debugging
+        print(f"Query returned {len(results)} results")
+        
         # Save results to state
         state['results'] = results
         
+        # Clear any previous errors
+        if 'error' in state:
+            state['error'] = None
+        
     except Exception as e:
         # Handle errors gracefully
-        print(f"Error in analytical_agent: {e}")
-        state['sql_query'] = None
-        state['results'] = None
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error in analytical_agent: {error_trace}")
+        print(f"SQL query that failed: {state.get('sql_query', 'N/A')}")
+        
+        # Set results to empty array instead of None
+        state['results'] = []
+        state['sql_query'] = state.get('sql_query', None)  # Keep the SQL for debugging
+        
+        # Store error message in a separate field for frontend
+        error_message = f"Error executing query: {str(e)}"
+        if "syntax error" in str(e).lower() or "invalid" in str(e).lower():
+            error_message = f"SQL syntax error: {str(e)}"
+        elif "does not exist" in str(e).lower() or "relation" in str(e).lower():
+            error_message = f"Database error - table or column not found: {str(e)}"
+        
+        state['error'] = error_message
     
     return state
 
@@ -214,24 +362,144 @@ async def semantic_agent(state: QueryState) -> QueryState:
         
         # Construct SQL query to get the full details for these products
         product_ids_str = ', '.join(f"'{pid}'" for pid in product_ids)
-        sql_query = f"""SELECT p.*, t.product_category_name_english, AVG(r.review_score) as avg_score 
+        sql_query = f"""SELECT 
+    p.product_id,
+    p.product_category_name,
+    p.product_name_lenght,
+    p.product_description_lenght,
+    p.product_photos_qty,
+    p.product_weight_g,
+    p.product_length_cm,
+    p.product_height_cm,
+    p.product_width_cm,
+    t.product_category_name_english, 
+    AVG(r.review_score) as avg_score,
+    COUNT(DISTINCT oi.order_id) as order_count
 FROM products p 
-JOIN product_category_translation t ON p.product_category_name = t.product_category_name 
+LEFT JOIN product_category_translation t ON p.product_category_name = t.product_category_name 
 LEFT JOIN order_items oi ON p.product_id = oi.product_id 
 LEFT JOIN order_reviews r ON oi.order_id = r.order_id 
 WHERE p.product_id IN ({product_ids_str}) 
-GROUP BY p.product_id, t.product_category_name_english"""
+GROUP BY 
+    p.product_id,
+    p.product_category_name,
+    p.product_name_lenght,
+    p.product_description_lenght,
+    p.product_photos_qty,
+    p.product_weight_g,
+    p.product_length_cm,
+    p.product_height_cm,
+    p.product_width_cm,
+    t.product_category_name_english"""
         
         # Execute the SQL query
         results = await execute_query(sql_query)
         
+        # Ensure results is always a list (never None)
+        if results is None:
+            results = []
+        
         # Save the data to state['results']
         state['results'] = results
         
+        # Clear any previous errors
+        if 'error' in state:
+            state['error'] = None
+        
     except Exception as e:
         # Handle errors gracefully
-        print(f"Error in semantic_agent: {e}")
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error in semantic_agent: {error_trace}")
         state['results'] = []
+        state['error'] = f"Error performing semantic search: {str(e)}"
+    
+    return state
+
+
+async def tool_agent(state: QueryState) -> QueryState:
+    """
+    Tool agent that handles external API calls, definitions, and information
+    not in the database. It uses Gemini to parse the query and determine
+    which tool to use and with what parameters.
+    """
+    query = state.get('query', '')
+    
+    # Create prompt for Gemini to parse the query and extract tool name and parameters
+    prompt = f"""Given this user query: "{query}"
+
+Determine which tool to use and extract the necessary parameters.
+
+Available tools:
+1. **wikipedia_lookup**: For looking up general information on Wikipedia
+   - Parameter: topic (the topic to look up)
+   - Example: "what is boleto?" -> tool: "wikipedia_lookup", topic: "boleto"
+   
+2. **get_definition**: For defining terms in the context of Brazilian e-commerce
+   - Parameter: term (the term to define)
+   - Example: "what does 'frete' mean?" -> tool: "get_definition", term: "frete"
+
+Return ONLY a valid JSON object with this exact structure:
+{{
+  "tool": "wikipedia_lookup" | "get_definition",
+  "parameters": {{
+    "topic": "string" (for wikipedia_lookup) OR
+    "term": "string" (for get_definition)
+  }}
+}}
+
+Return only the JSON object, no additional text or markdown formatting."""
+
+    try:
+        # Initialize the Gemini model
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Generate response
+        response = model.generate_content(prompt)
+        
+        # Extract text from response
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks if present
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.startswith('```'):
+            response_text = response_text[3:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+        
+        # Parse JSON response
+        parsed_response = json.loads(response_text)
+        
+        tool_name = parsed_response.get('tool', '')
+        parameters = parsed_response.get('parameters', {})
+        
+        # Call the appropriate tool function
+        if tool_name == 'wikipedia_lookup':
+            topic = parameters.get('topic', '')
+            result_text = wikipedia_lookup(topic)
+        elif tool_name == 'get_definition':
+            term = parameters.get('term', '')
+            result_text = await get_definition(term)
+        else:
+            result_text = f"Unknown tool: {tool_name}"
+        
+        # Save results to state as a text result
+        # Store as a list with a single dict containing the text result
+        state['results'] = [{'text': result_text}]
+        state['visualization_config'] = {'type': 'text'}
+        
+    except json.JSONDecodeError as e:
+        # Fallback error handling
+        print(f"Error parsing JSON response in tool_agent: {e}")
+        state['results'] = [{'text': 'Error: Could not parse tool request'}]
+        state['visualization_config'] = {'type': 'text'}
+    except Exception as e:
+        # Handle errors gracefully
+        print(f"Error in tool_agent: {e}")
+        state['results'] = [{'text': f'Error: {str(e)}'}]
+        state['visualization_config'] = {'type': 'text'}
     
     return state
 
@@ -244,9 +512,16 @@ async def viz_generator(state: QueryState) -> QueryState:
     results = state.get('results', [])
     query = state.get('query', '')
     
-    # If no results, set empty visualization config
-    if not results:
+    # If there's an error, skip visualization generation
+    if state.get('error'):
         state['visualization_config'] = None
+        return state
+    
+    # If no results (empty array), still create a table visualization
+    # This allows the frontend to show "No data found" in a table format
+    if not results or len(results) == 0:
+        # Set a default table visualization for empty results
+        state['visualization_config'] = {"type": "table", "x_axis": None, "y_axis": None}
         return state
     
     # Get a sample of the results (first 5 rows) for the prompt
@@ -271,7 +546,7 @@ Return only the JSON object, no additional text or markdown formatting."""
 
     try:
         # Initialize the Gemini model
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Generate response
         response = model.generate_content(prompt)
@@ -325,26 +600,30 @@ workflow = StateGraph(QueryState)
 workflow.add_node("router", router_agent)
 workflow.add_node("analytical", analytical_agent)
 workflow.add_node("semantic", semantic_agent)
+workflow.add_node("tool", tool_agent)
 workflow.add_node("visualizer", viz_generator)
 
 # Set the router as the entry point
 workflow.set_entry_point("router")
 
-# Add conditional edges from router to analytical and semantic
+# Add conditional edges from router to analytical, semantic, and tool
 workflow.add_conditional_edges(
     "router",
     route_after_router,
     {
         "analytical": "analytical",
         "semantic": "semantic",
-        "tool": END,  # For now, tool goes to END (we'll add tool agent later)
-        "conversational": END  # Conversational also goes to END
+        "tool": "tool",
+        "conversational": END  # Conversational goes to END
     }
 )
 
 # Add normal edges from analytical to visualizer and semantic to visualizer
 workflow.add_edge("analytical", "visualizer")
 workflow.add_edge("semantic", "visualizer")
+
+# Add an edge from tool agent to END (tool results are text, no visualization needed)
+workflow.add_edge("tool", END)
 
 # Add an edge from visualizer to END
 workflow.add_edge("visualizer", END)
