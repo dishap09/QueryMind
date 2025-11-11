@@ -77,83 +77,146 @@ export default function VizRenderer({ vizData }: VizRendererProps) {
 
   switch (config.type) {
     case 'bar':
+      // Format x-axis labels - truncate long IDs and show first/last chars
+      const formatXAxisLabel = (label: string) => {
+        if (typeof label !== 'string') return String(label)
+        if (label.length > 12) {
+          return `${label.substring(0, 6)}...${label.substring(label.length - 4)}`
+        }
+        return label
+      }
+
       return (
         <div className="viz-chart-container">
-          <ResponsiveContainer width="100%" height={500}>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-              <XAxis 
-                dataKey={config.x_axis} 
-                stroke="#9ca3af"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                stroke="#9ca3af"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                  fontSize: '12px'
-                }}
-              />
-              <Legend />
-              <Bar 
-                dataKey={config.y_axis} 
-                fill="#10b981"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="viz-chart-wrapper">
+            <ResponsiveContainer width="100%" height={550}>
+              <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" opacity={0.5} vertical={false} />
+                <XAxis 
+                  dataKey={config.x_axis}
+                  stroke="#6b7280"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={true}
+                  axisLineStroke="#e5e7eb"
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  tickFormatter={formatXAxisLabel}
+                  tick={{ fill: '#6b7280', fontSize: 10 }}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={true}
+                  axisLineStroke="#e5e7eb"
+                  tick={{ fill: '#6b7280', fontSize: 11 }}
+                  width={60}
+                  tickFormatter={(value) => {
+                    if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
+                    return value.toString()
+                  }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    fontSize: '12px',
+                    padding: '8px 12px'
+                  }}
+                  cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
+                  formatter={(value: any) => {
+                    if (typeof value === 'number') {
+                      return value.toLocaleString('en-US', { maximumFractionDigits: 2 })
+                    }
+                    return value
+                  }}
+                />
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#059669" stopOpacity={1} />
+                  </linearGradient>
+                </defs>
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="circle"
+                />
+                <Bar 
+                  dataKey={config.y_axis}
+                  fill="url(#barGradient)"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={80}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )
 
     case 'line':
       return (
         <div className="viz-chart-container">
-          <ResponsiveContainer width="100%" height={500}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-              <XAxis 
-                dataKey={config.x_axis} 
-                stroke="#9ca3af"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                stroke="#9ca3af"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                  fontSize: '12px'
-                }}
-              />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey={config.y_axis} 
-                stroke="#10b981"
-                strokeWidth={2.5}
-                dot={{ fill: '#10b981', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6, fill: '#059669', strokeWidth: 2, stroke: '#fff' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="viz-chart-wrapper">
+            <ResponsiveContainer width="100%" height={550}>
+              <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" opacity={0.5} vertical={false} />
+                <XAxis 
+                  dataKey={config.x_axis} 
+                  stroke="#6b7280"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={true}
+                  axisLineStroke="#e5e7eb"
+                  tick={{ fill: '#6b7280', fontSize: 11 }}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={true}
+                  axisLineStroke="#e5e7eb"
+                  tick={{ fill: '#6b7280', fontSize: 11 }}
+                  width={60}
+                  tickFormatter={(value) => {
+                    if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
+                    return value.toString()
+                  }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    fontSize: '12px',
+                    padding: '8px 12px'
+                  }}
+                  formatter={(value: any) => {
+                    if (typeof value === 'number') {
+                      return value.toLocaleString('en-US', { maximumFractionDigits: 2 })
+                    }
+                    return value
+                  }}
+                />
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="circle"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey={config.y_axis} 
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  dot={{ fill: '#10b981', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 7, fill: '#059669', strokeWidth: 2, stroke: '#fff' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )
 
