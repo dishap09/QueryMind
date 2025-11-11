@@ -31,3 +31,6 @@ data/*.csv
 *.db
 *.sqlite
 
+# Vector database
+chroma_db/
+
