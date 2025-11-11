@@ -34,3 +34,9 @@ data/*.csv
 # Vector database
 chroma_db/
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/build/
+

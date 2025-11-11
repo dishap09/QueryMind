@@ -1,10 +1,11 @@
-from typing import TypedDict, Optional, List
-from langgraph.graph import StateGraph
+from typing import TypedDict, Optional, List, Literal
+from langgraph.graph import StateGraph, END
 import os
 import json
 from dotenv import load_dotenv
 import google.generativeai as genai
 from backend.database import fetch_schema, execute_query
+from backend.vector_store import semantic_search
 
 # Load environment variables
 load_dotenv()
@@ -193,4 +194,161 @@ Return ONLY the SQL string."""
         state['results'] = None
     
     return state
+
+
+async def semantic_agent(state: QueryState) -> QueryState:
+    """
+    Semantic agent that performs semantic search on products and retrieves
+    full product details for the matching products.
+    """
+    query = state.get('query', '')
+    
+    try:
+        # Call semantic_search to get product_ids
+        product_ids = await semantic_search(query)
+        
+        # If no product_ids are found, return an empty state
+        if not product_ids:
+            state['results'] = []
+            return state
+        
+        # Construct SQL query to get the full details for these products
+        product_ids_str = ', '.join(f"'{pid}'" for pid in product_ids)
+        sql_query = f"""SELECT p.*, t.product_category_name_english, AVG(r.review_score) as avg_score 
+FROM products p 
+JOIN product_category_translation t ON p.product_category_name = t.product_category_name 
+LEFT JOIN order_items oi ON p.product_id = oi.product_id 
+LEFT JOIN order_reviews r ON oi.order_id = r.order_id 
+WHERE p.product_id IN ({product_ids_str}) 
+GROUP BY p.product_id, t.product_category_name_english"""
+        
+        # Execute the SQL query
+        results = await execute_query(sql_query)
+        
+        # Save the data to state['results']
+        state['results'] = results
+        
+    except Exception as e:
+        # Handle errors gracefully
+        print(f"Error in semantic_agent: {e}")
+        state['results'] = []
+    
+    return state
+
+
+async def viz_generator(state: QueryState) -> QueryState:
+    """
+    Visualization generator that recommends the best visualization type
+    and configuration based on the query results and user query.
+    """
+    results = state.get('results', [])
+    query = state.get('query', '')
+    
+    # If no results, set empty visualization config
+    if not results:
+        state['visualization_config'] = None
+        return state
+    
+    # Get a sample of the results (first 5 rows) for the prompt
+    sample_results = results[:5] if len(results) > 5 else results
+    
+    # Create prompt for Gemini
+    prompt = f"""Based on this data: {json.dumps(sample_results, indent=2)}
+
+And the user's query: "{query}"
+
+What is the best visualization? Recommend type: 'bar', 'line', 'table', or 'map' and the columns for x_axis, y_axis, and color.
+
+Return pure JSON with this structure:
+{{
+  "type": "bar" | "line" | "table" | "map",
+  "x_axis": "column_name",
+  "y_axis": "column_name",
+  "color": "column_name" (optional)
+}}
+
+Return only the JSON object, no additional text or markdown formatting."""
+
+    try:
+        # Initialize the Gemini model
+        model = genai.GenerativeModel('gemini-pro')
+        
+        # Generate response
+        response = model.generate_content(prompt)
+        
+        # Extract text from response
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks if present
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.startswith('```'):
+            response_text = response_text[3:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+        
+        # Parse JSON response
+        visualization_config = json.loads(response_text)
+        
+        # Save to state
+        state['visualization_config'] = visualization_config
+        
+    except json.JSONDecodeError as e:
+        # Fallback to table if JSON parsing fails
+        print(f"Error parsing JSON response: {e}")
+        state['visualization_config'] = {"type": "table"}
+    except Exception as e:
+        # Fallback to table on any error
+        print(f"Error in viz_generator: {e}")
+        state['visualization_config'] = {"type": "table"}
+    
+    return state
+
+
+def route_after_router(state: QueryState) -> Literal["analytical", "semantic", "tool", "conversational"]:
+    """
+    Conditional routing function that routes based on intent.
+    """
+    intent = state.get('intent', 'conversational')
+    # Ensure intent is one of the valid values
+    valid_intents = ["analytical", "semantic", "tool", "conversational"]
+    if intent not in valid_intents:
+        intent = "conversational"
+    return intent  # type: ignore
+
+
+# Initialize workflow
+workflow = StateGraph(QueryState)
+
+# Add all the nodes
+workflow.add_node("router", router_agent)
+workflow.add_node("analytical", analytical_agent)
+workflow.add_node("semantic", semantic_agent)
+workflow.add_node("visualizer", viz_generator)
+
+# Set the router as the entry point
+workflow.set_entry_point("router")
+
+# Add conditional edges from router to analytical and semantic
+workflow.add_conditional_edges(
+    "router",
+    route_after_router,
+    {
+        "analytical": "analytical",
+        "semantic": "semantic",
+        "tool": END,  # For now, tool goes to END (we'll add tool agent later)
+        "conversational": END  # Conversational also goes to END
+    }
+)
+
+# Add normal edges from analytical to visualizer and semantic to visualizer
+workflow.add_edge("analytical", "visualizer")
+workflow.add_edge("semantic", "visualizer")
+
+# Add an edge from visualizer to END
+workflow.add_edge("visualizer", END)
+
+# Compile the graph
+app = workflow.compile()
 
