@@ -1,0 +1,180 @@
+.guide-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 999;
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.guide-highlight {
+  border: 3px solid #6366f1;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(99, 102, 241, 0.3), 0 8px 24px rgba(99, 102, 241, 0.4);
+  pointer-events: none;
+  z-index: 1000;
+  animation: highlightPulse 2s ease-in-out infinite;
+}
+
+@keyframes highlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(99, 102, 241, 0.3), 0 8px 24px rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(99, 102, 241, 0.5), 0 8px 32px rgba(99, 102, 241, 0.6);
+  }
+}
+
+.guide-tooltip {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 380px;
+  min-width: 320px;
+  animation: guideFadeIn 0.3s ease-out;
+}
+
+@keyframes guideFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.guide-tooltip-header {
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.guide-tooltip-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  flex: 1;
+}
+
+.guide-close-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  margin-left: 1rem;
+}
+
+.guide-close-button:hover {
+  background: #f3f4f6;
+  color: #1a1a1a;
+}
+
+.guide-tooltip-description {
+  padding: 1rem 1.5rem;
+  color: #6b7280;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.guide-tooltip-footer {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.guide-progress {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.guide-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+  transition: all 0.3s;
+}
+
+.guide-progress-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: #6366f1;
+}
+
+.guide-progress-dot.completed {
+  background: #10b981;
+}
+
+.guide-tooltip-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.guide-button {
+  min-width: 80px;
+}
+
+.guide-button-primary {
+  background: #6366f1;
+  color: white;
+}
+
+.guide-button-primary:hover {
+  background: #4f46e5;
+}
+
+.guide-start-button {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  z-index: 100;
+  transition: all 0.2s;
+}
+
+.guide-start-button:hover {
+  background: #4f46e5;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
+}
+
