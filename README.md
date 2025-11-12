@@ -467,6 +467,18 @@ Translate Portuguese text to English.
 - **Voice Input** - Speak your queries naturally
 - **Multi-language** - Supports Portuguese to English translation
 
+## Future Enhancements
+
+**Real-time Collaboration & Query Sharing**
+- Enable multiple users to collaborate on queries and share insights
+- Query history and saved query templates for team productivity
+- Comment and annotation features on visualizations
+
+**Advanced Analytics & Predictive Insights**
+- Time-series analysis with trend forecasting
+- Comparative analytics across different time periods or segments
+- Automated anomaly detection and alerting for business metrics
+
 ## Built With
 
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
