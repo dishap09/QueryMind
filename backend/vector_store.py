@@ -83,6 +83,9 @@ async def semantic_search(query_text: str, n_results: int = 5):
         # Check if collection is empty
         elif "empty" in error_msg.lower() or "not found" in error_msg.lower():
             raise Exception(f"Vector database is empty or not initialized. Please run the database/build_vector_db.py script to populate the vector database. Error: {error_msg}")
+        # Check if it's a database schema compatibility issue
+        elif "no such column" in error_msg.lower() or "collections.topic" in error_msg.lower():
+            raise Exception(f"ChromaDB database schema is incompatible. The database needs to be rebuilt. Please delete the chroma_db directory and run database/build_vector_db.py to rebuild the vector database. Error: {error_msg}")
         else:
             raise Exception(f"Error performing semantic search: {error_msg}")
 

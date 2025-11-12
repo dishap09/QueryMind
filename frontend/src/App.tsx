@@ -5,6 +5,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import VizRenderer from '@/components/VizRenderer'
 import UserGuide from '@/components/UserGuide'
 import VoiceInput from '@/components/VoiceInput'
+import InsightsPanel from '@/components/InsightsPanel'
+import { useTheme } from '@/contexts/ThemeContext'
 import './App.css'
 
 interface Message {
@@ -23,16 +25,19 @@ interface VisualizationConfig {
 interface CurrentViz {
   results: any[] | null
   visualization_config: VisualizationConfig | null
+  insights: string | null
 }
 
 function App() {
+  const { theme, toggleTheme } = useTheme()
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const [currentViz, setCurrentViz] = useState<CurrentViz>({
     results: null,
-    visualization_config: null
+    visualization_config: null,
+    insights: null
   })
 
   useEffect(() => {
@@ -82,6 +87,9 @@ function App() {
 
       // Ensure results is always an array (backend should handle this, but double-check)
       const results = Array.isArray(finalState.results) ? finalState.results : []
+      
+      // Store insights if available
+      const insights = finalState.insights || null
 
       // Check for errors first - this takes priority over everything else
       if (finalState.error) {
@@ -94,7 +102,8 @@ function App() {
         }])
         setCurrentViz({
           results: null,
-          visualization_config: null
+          visualization_config: null,
+          insights: null
         })
       } else if (results.length > 0) {
         // We have results - show success message and visualization
@@ -105,10 +114,11 @@ function App() {
           timestamp: new Date()
         }])
 
-        // Set currentViz with results and visualization_config
+        // Set currentViz with results, visualization_config, and insights
         setCurrentViz({
           results: results,
-          visualization_config: finalState.visualization_config || null
+          visualization_config: finalState.visualization_config || null,
+          insights: insights
         })
       } else {
         // No results but no error - this means the query executed but returned empty
@@ -122,7 +132,8 @@ function App() {
         // Still set visualization config if available (might be a table showing no data)
         setCurrentViz({
           results: [],
-          visualization_config: finalState.visualization_config || null
+          visualization_config: finalState.visualization_config || null,
+          insights: null
         })
       }
     } catch (error) {
@@ -144,7 +155,8 @@ function App() {
       }])
       setCurrentViz({
         results: null,
-        visualization_config: null
+        visualization_config: null,
+        insights: null
       })
     } finally {
       setIsLoading(false)
@@ -195,6 +207,22 @@ function App() {
             </div>
           </div>
           <div className="header-actions">
+            <button 
+              className="theme-toggle-button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
             <button 
               className="help-button"
               onClick={() => setShowGuide(true)}
@@ -363,6 +391,7 @@ function App() {
           </div>
           <div className="viz-content">
             <VizRenderer vizData={currentViz} />
+            <InsightsPanel insights={currentViz.insights} />
           </div>
         </div>
       </div>

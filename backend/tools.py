@@ -68,3 +68,32 @@ async def get_definition(term: str) -> str:
     except Exception as e:
         return f"Error getting definition: {str(e)}"
 
+
+async def translate_to_english(text: str) -> str:
+    """
+    Translate text from Portuguese (or any language) to English using Gemini.
+    
+    Args:
+        text: The text to translate
+        
+    Returns:
+        Translated text in English
+    """
+    try:
+        # Check for API key when function is called
+        GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+        if not GEMINI_API_KEY:
+            return "Error: GEMINI_API_KEY must be set in .env file"
+        
+        # Configure genai (idempotent - safe to call multiple times)
+        genai.configure(api_key=GEMINI_API_KEY)
+        
+        prompt = f"Translate the following text to English. If it's already in English, return it as is. Only return the translation, no explanations:\n\n{text}"
+        
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        
+        return response.text.strip()
+    except Exception as e:
+        return f"Translation error: {str(e)}"
+

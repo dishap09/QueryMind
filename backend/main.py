@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.orchestrator import app as workflow_app
 from backend.memory import MemoryManager
+from backend.tools import translate_to_english
 import asyncio
 import traceback
 
@@ -39,6 +40,10 @@ class ChatRequest(BaseModel):
     user_id: str
 
 
+class TranslateRequest(BaseModel):
+    text: str
+
+
 @app.post("/api/chat/query")
 async def chat_query(request: ChatRequest):
     try:
@@ -66,7 +71,8 @@ async def chat_query(request: ChatRequest):
             "visualization_config": None,
             "memory_context": memory_context,
             "db_schema": "",
-            "error": None
+            "error": None,
+            "insights": None
         }
         
         # Invoke the workflow
@@ -127,4 +133,18 @@ async def chat_query(request: ChatRequest):
         }
         
         return error_response
+
+
+@app.post("/api/translate")
+async def translate_text(request: TranslateRequest):
+    """
+    Translate text to English.
+    """
+    try:
+        translated_text = await translate_to_english(request.text)
+        return {"translated": translated_text}
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"Error in translate_text: {error_trace}")
+        raise HTTPException(status_code=500, detail=f"Error translating text: {str(e)}")
 

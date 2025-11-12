@@ -14,23 +14,23 @@ const guideSteps: GuideStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to QueryMind! 🎉',
-    description: 'QueryMind is your intelligent data analytics assistant. Ask questions in natural language and get instant insights with beautiful visualizations.',
+    description: 'QueryMind is your intelligent data analytics assistant. Ask questions in natural language and get instant insights with beautiful visualizations, AI-powered analysis, and export capabilities.',
     target: 'header',
+    position: 'bottom'
+  },
+  {
+    id: 'theme-toggle',
+    title: 'Theme Toggle',
+    description: 'Switch between light and dark mode using this button. Your preference is automatically saved for your next visit.',
+    target: 'theme-toggle',
     position: 'bottom'
   },
   {
     id: 'chat',
     title: 'Chat Interface',
-    description: 'Ask questions about your data here. You can query for analytics, search for products, or get definitions. Try the example queries below to get started!',
+    description: 'Ask questions about your data here. You can query for analytics, search for products, or get definitions. Your conversation history is displayed in this panel.',
     target: 'chat-panel',
     position: 'right'
-  },
-  {
-    id: 'visualization',
-    title: 'Visualization Panel',
-    description: 'Your query results will appear here as interactive charts, tables, or visualizations. The system automatically selects the best visualization type for your data.',
-    target: 'viz-panel',
-    position: 'left'
   },
   {
     id: 'examples',
@@ -42,8 +42,29 @@ const guideSteps: GuideStep[] = [
   {
     id: 'input',
     title: 'Query Input',
-    description: 'Type your question here and press Enter or click Send. QueryMind understands natural language and will generate the appropriate SQL queries or search your data.',
+    description: 'Type your question here and press Enter or click Send. You can also use the microphone icon for voice input. QueryMind understands natural language and will generate the appropriate SQL queries or search your data.',
     target: 'chat-input-container',
+    position: 'top'
+  },
+  {
+    id: 'visualization',
+    title: 'Visualization Panel',
+    description: 'Your query results will appear here as interactive charts, tables, or visualizations. The system automatically selects the best visualization type for your data. Use the zoom controls to adjust the view.',
+    target: 'viz-panel',
+    position: 'left'
+  },
+  {
+    id: 'export',
+    title: 'Export Results',
+    description: 'Export your visualization and data in multiple formats: CSV for spreadsheets, JSON for developers, PNG for images, or PDF for reports. Click the Export button to see all options.',
+    target: 'export-button',
+    position: 'bottom'
+  },
+  {
+    id: 'insights',
+    title: 'AI-Generated Insights',
+    description: 'Get intelligent insights automatically generated from your query results. The AI analyzes patterns, trends, and anomalies to provide actionable recommendations and key findings.',
+    target: 'insights-panel',
     position: 'top'
   }
 ]
@@ -64,7 +85,32 @@ export default function UserGuide({ onComplete, isVisible }: UserGuideProps) {
 
     const updatePosition = () => {
       const step = guideSteps[currentStep]
-      const targetElement = document.querySelector(`[data-guide-target="${step.target}"]`)
+      let targetElement = document.querySelector(`[data-guide-target="${step.target}"]`)
+      
+      // Special handling for specific targets
+      if (step.target === 'theme-toggle') {
+        targetElement = document.querySelector('.theme-toggle-button')
+      } else if (step.target === 'export-button') {
+        targetElement = document.querySelector('.viz-export-button')
+        // Skip export step if button is not visible (no visualization yet)
+        if (!targetElement) {
+          // Auto-advance to next step if element not found
+          if (currentStep < guideSteps.length - 1) {
+            setTimeout(() => setCurrentStep(currentStep + 1), 100)
+            return
+          }
+        }
+      } else if (step.target === 'insights-panel') {
+        targetElement = document.querySelector('.insights-panel')
+        // Skip insights step if panel is not visible (no insights yet)
+        if (!targetElement) {
+          // Auto-advance to next step if element not found
+          if (currentStep < guideSteps.length - 1) {
+            setTimeout(() => setCurrentStep(currentStep + 1), 100)
+            return
+          }
+        }
+      }
       
       if (!targetElement) {
         // If element not found, center the tooltip
@@ -80,8 +126,12 @@ export default function UserGuide({ onComplete, isVisible }: UserGuideProps) {
       }
 
       const rect = targetElement.getBoundingClientRect()
-      const scrollY = window.scrollY
-      const scrollX = window.scrollX
+      const tooltipRefElement = tooltipRef.current
+      const tooltipWidth = tooltipRefElement?.offsetWidth || 380
+      const tooltipHeight = tooltipRefElement?.offsetHeight || 280
+      const spacing = 16
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
 
       // Set highlight position
       setHighlightStyle({
@@ -93,51 +143,111 @@ export default function UserGuide({ onComplete, isVisible }: UserGuideProps) {
         zIndex: 1000,
       })
 
-      // Calculate tooltip position based on step position
+      // Smart positioning: try preferred position first, then fallback to best available
+      let preferredPosition = step.position
       let tooltipTop = 0
       let tooltipLeft = 0
+      let transform = ''
+      let finalPosition = preferredPosition
 
-      switch (step.position) {
+      // Check if preferred position has enough space
+      const checkPosition = (pos: 'top' | 'bottom' | 'left' | 'right'): boolean => {
+        switch (pos) {
+          case 'bottom':
+            return rect.bottom + spacing + tooltipHeight <= viewportHeight - spacing
+          case 'top':
+            return rect.top - spacing - tooltipHeight >= spacing
+          case 'right':
+            return rect.right + spacing + tooltipWidth <= viewportWidth - spacing
+          case 'left':
+            return rect.left - spacing - tooltipWidth >= spacing
+          default:
+            return false
+        }
+      }
+
+      // Try preferred position first
+      if (!checkPosition(preferredPosition)) {
+        // Find best alternative position
+        const positions: Array<'top' | 'bottom' | 'left' | 'right'> = ['bottom', 'top', 'right', 'left']
+        for (const pos of positions) {
+          if (pos !== preferredPosition && checkPosition(pos)) {
+            finalPosition = pos
+            break
+          }
+        }
+      }
+
+      // Calculate position based on final chosen position
+      switch (finalPosition) {
         case 'bottom':
-          tooltipTop = rect.bottom + scrollY + 20
-          tooltipLeft = rect.left + scrollX + (rect.width / 2)
+          tooltipTop = rect.bottom + spacing
+          tooltipLeft = rect.left + (rect.width / 2)
+          transform = 'translateX(-50%)'
           break
         case 'top':
-          tooltipTop = rect.top + scrollY - 220
-          tooltipLeft = rect.left + scrollX + (rect.width / 2)
+          tooltipTop = rect.top - tooltipHeight - spacing
+          tooltipLeft = rect.left + (rect.width / 2)
+          transform = 'translateX(-50%)'
           break
         case 'right':
-          tooltipTop = rect.top + scrollY + (rect.height / 2)
-          tooltipLeft = rect.right + scrollX + 20
+          tooltipTop = rect.top + (rect.height / 2)
+          tooltipLeft = rect.right + spacing
+          transform = 'translateY(-50%)'
           break
         case 'left':
-          tooltipTop = rect.top + scrollY + (rect.height / 2)
-          tooltipLeft = rect.left + scrollX - 380
+          tooltipTop = rect.top + (rect.height / 2)
+          tooltipLeft = rect.left - tooltipWidth - spacing
+          transform = 'translate(-100%, -50%)'
           break
       }
 
-      // Adjust if tooltip would go off screen
-      if (tooltipLeft < 20) tooltipLeft = 20
-      if (tooltipLeft > window.innerWidth - 400) tooltipLeft = window.innerWidth - 400
-      if (tooltipTop < 20) tooltipTop = 20
-      if (tooltipTop > window.innerHeight + scrollY - 250) tooltipTop = window.innerHeight + scrollY - 250
+      // Final boundary checks and adjustments
+      if (finalPosition === 'bottom' || finalPosition === 'top') {
+        // Horizontal centering with boundary checks
+        if (tooltipLeft - tooltipWidth / 2 < spacing) {
+          tooltipLeft = spacing + tooltipWidth / 2
+        } else if (tooltipLeft + tooltipWidth / 2 > viewportWidth - spacing) {
+          tooltipLeft = viewportWidth - spacing - tooltipWidth / 2
+        }
+      } else {
+        // Vertical centering with boundary checks
+        if (tooltipTop - tooltipHeight / 2 < spacing) {
+          tooltipTop = spacing + tooltipHeight / 2
+        } else if (tooltipTop + tooltipHeight / 2 > viewportHeight - spacing) {
+          tooltipTop = viewportHeight - spacing - tooltipHeight / 2
+        }
+      }
+
+      // Ensure tooltip stays within viewport
+      tooltipLeft = Math.max(spacing, Math.min(tooltipLeft, viewportWidth - tooltipWidth - spacing))
+      tooltipTop = Math.max(spacing, Math.min(tooltipTop, viewportHeight - tooltipHeight - spacing))
 
       setTooltipStyle({
-        position: 'absolute',
+        position: 'fixed',
         top: tooltipTop,
         left: tooltipLeft,
-        transform: step.position === 'bottom' || step.position === 'top' ? 'translateX(-50%)' : step.position === 'right' ? 'translateY(-50%)' : 'translate(-100%, -50%)',
+        transform: transform,
         zIndex: 1001,
       })
     }
 
-    updatePosition()
+    // Small delay to ensure DOM is ready, then update again after render to get accurate dimensions
+    let timeoutId2: NodeJS.Timeout | null = null
+    const timeoutId1 = setTimeout(() => {
+      updatePosition()
+      // Update again after a short delay to account for tooltip rendering
+      timeoutId2 = setTimeout(updatePosition, 100)
+    }, 50)
+    
     window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
 
     return () => {
+      clearTimeout(timeoutId1)
+      if (timeoutId2) clearTimeout(timeoutId2)
       window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
     }
   }, [currentStep, isVisible])
 
