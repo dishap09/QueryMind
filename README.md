@@ -2,17 +2,6 @@
 
 QueryMind is an intelligent data analytics application that allows users to query a Brazilian e-commerce database using natural language. The system intelligently routes queries to appropriate handlers (SQL generation, semantic search, or external tools) and automatically generates visualizations based on the results.
 
-## Screenshots
-
-### Main Interface
-![QueryMind Main Interface](docs/screenshots/main-interface.png)
-*The main QueryMind interface showing the chat panel, visualization panel, and AI-generated insights*
-
-### Query Results with Visualization
-![Query Results](docs/screenshots/query-results.png)
-*Example query results showing interactive bar charts and data insights*
-
-
 ## Features
 
 ### Core Capabilities
@@ -29,6 +18,36 @@ QueryMind is an intelligent data analytics application that allows users to quer
 - **Voice Input** - Speak your queries using browser speech recognition
 - **Conversation Memory** - Context-aware follow-up queries
 - **Multi-language Support** - Portuguese to English translation built-in
+
+## Technology Stack
+
+**Backend:**
+- FastAPI: Modern Python web framework
+- LangGraph: Workflow orchestration
+- PostgreSQL: Relational database
+- ChromaDB: Vector database for semantic search
+- Google Gemini: LLM for query understanding and SQL generation
+- OpenAI: Text embeddings for semantic search
+- Supermemory: Conversation memory management
+- asyncpg: Async PostgreSQL driver
+
+**Frontend:**
+- React 19: UI framework
+- TypeScript: Type safety
+- Vite: Build tool and dev server
+- Plotly.js: Advanced visualizations
+- Recharts: React charting library
+- Radix UI: Accessible component primitives
+
+## Screenshots
+
+### Main Interface
+![QueryMind Main Interface](docs/screenshots/main-interface.png)
+*The main QueryMind interface showing the chat panel, visualization panel, and AI-generated insights*
+
+### Query Results with Visualization
+![Query Results](docs/screenshots/query-results.png)
+*Example query results showing interactive bar charts and data insights*
 
 ## Architecture
 
@@ -159,7 +178,7 @@ QueryMind follows a microservices-inspired architecture with clear separation be
 │                                    ▼                                         │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                      Update Conversation Memory                      │   │
-│  │                    (Supermemory - Optional)                          │   │
+│  │                    (Supermemory.ai - Optional)                          │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                         │
 │                                    ▼                                         │
@@ -209,26 +228,6 @@ QueryMind follows a microservices-inspired architecture with clear separation be
 **Smart Visualization** → AI analyzes your results and automatically selects the best chart type
 
 **Context Awareness** → Maintains conversation context for natural follow-up queries
-
-### Technology Stack
-
-**Backend:**
-- FastAPI: Modern Python web framework
-- LangGraph: Workflow orchestration
-- PostgreSQL: Relational database
-- ChromaDB: Vector database for semantic search
-- Google Gemini: LLM for query understanding and SQL generation
-- OpenAI: Text embeddings for semantic search
-- Supermemory: Conversation memory management
-- asyncpg: Async PostgreSQL driver
-
-**Frontend:**
-- React 19: UI framework
-- TypeScript: Type safety
-- Vite: Build tool and dev server
-- Plotly.js: Advanced visualizations
-- Recharts: React charting library
-- Radix UI: Accessible component primitives
 
 ## Prerequisites
 
