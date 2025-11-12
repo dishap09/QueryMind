@@ -16,14 +16,20 @@ QueryMind is an intelligent data analytics application that allows users to quer
 
 ## Features
 
-- **Natural Language Querying**: Ask questions in plain English about your data
-- **Intelligent Query Routing**: Automatically classifies queries into analytical, semantic, tool-based, or conversational intents
-- **SQL Generation**: Converts natural language questions into SQL queries using LLM
-- **Semantic Search**: Uses vector embeddings to find products based on meaning and context
-- **Automatic Visualization**: Generates appropriate charts (bar, line, table) based on query results
-- **Conversation Memory**: Maintains context across conversations using Supermemory
-- **Voice Input**: Supports voice queries through the browser's Web Speech API
-- **Multi-language Support**: Can translate Portuguese queries to English
+### Core Capabilities
+- **Natural Language Querying** - Ask questions in plain English, no SQL knowledge required
+- **Intelligent Query Routing** - Automatically classifies and routes queries to the appropriate handler
+- **SQL Generation** - Converts natural language to optimized SQL queries using AI
+- **Semantic Search** - Find products using meaning and context, not just keywords
+- **Automatic Visualization** - Smart chart generation based on your data
+- **AI-Powered Insights** - Get professional analysis and recommendations from your results
+
+### User Experience
+- **Dark Mode** - Beautiful dark theme with full UI support
+- **Export Functionality** - Download data in CSV, JSON, PNG, or PDF formats
+- **Voice Input** - Speak your queries using browser speech recognition
+- **Conversation Memory** - Context-aware follow-up queries
+- **Multi-language Support** - Portuguese to English translation built-in
 
 ## Architecture
 
@@ -189,67 +195,21 @@ QueryMind follows a microservices-inspired architecture with clear separation be
 │                                                                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            DATA FLOW EXAMPLE                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                               │
-│  User Query: "Show me top 10 sellers by number of orders"                    │
-│                                                                               │
-│  1. Frontend → POST /api/chat/query                                          │
-│  2. FastAPI → Create initial QueryState                                      │
-│  3. Intent Classifier → "analytical"                                         │
-│  4. Analytical Agent:                                                        │
-│     a. Enhance query with memory context (if available)                      │
-│     b. Generate SQL: "SELECT seller_id, COUNT(*) as num_orders..."          │
-│     c. Execute query → PostgreSQL                                            │
-│     d. Retrieve results: [{seller_id: "...", num_orders: 1854}, ...]        │
-│  5. Visualizer Agent → Analyze results → Generate config:                    │
-│     {type: "bar", x_axis: "seller_id", y_axis: "num_orders"}                │
-│  6. Insights Generator → Analyze patterns → Generate insights:               │
-│     "• Concentrated Market Leadership: Top 3 sellers account for..."         │
-│  7. Update memory with conversation context                                  │
-│  8. Return complete state to frontend                                        │
-│  9. Frontend renders:                                                        │
-│     • Chat message with results count                                        │
-│     • Bar chart visualization                                                │
-│     • AI-generated insights panel                                            │
-│     • Export options (CSV, JSON, PNG, PDF)                                   │
-│                                                                               │
-└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Design Decisions
+### How It Works
 
-#### 1. **LangGraph Workflow Orchestration**
-- Uses LangGraph's `StateGraph` to create a state machine for query processing
-- Enables clear separation of concerns with dedicated agents for each intent type
-- Makes the workflow easy to extend and debug
+**Intent Classification** → The system analyzes your query and routes it to the appropriate handler:
+- **Analytical** queries trigger SQL generation and database execution
+- **Semantic** queries use vector search to find relevant products
+- **Tool** queries access external APIs for definitions and translations
+- **Conversational** queries generate contextual responses
 
-#### 2. **Intent-Based Routing**
-The system classifies queries into four categories:
-- **Analytical**: Queries requiring SQL execution (e.g., "Top 5 products", "Total sales")
-- **Semantic**: Queries requiring RAG retrieval (e.g., "good products", "bad reviews")
-- **Tool**: Queries requiring external APIs (e.g., "what is boleto?", translations)
-- **Conversational**: General conversation queries
+**Hybrid Search** → Combines structured SQL queries with semantic vector search for comprehensive results
 
-#### 3. **Hybrid Search Strategy**
-- **Structured queries** → SQL generation with LLM
-- **Unstructured queries** → Semantic search using ChromaDB vector store
-- This hybrid approach ensures both precise analytical queries and fuzzy semantic queries work well
+**Smart Visualization** → AI analyzes your results and automatically selects the best chart type
 
-#### 4. **Context-Aware Query Enhancement**
-- Uses conversation memory to enhance follow-up queries
-- Example: If user asks "good reviews" then "bad reviews", the system understands the context
-
-#### 5. **Automatic Visualization Generation**
-- LLM analyzes query results and recommends appropriate visualization types
-- Supports bar charts, line charts, tables, and text displays
-- Frontend uses Plotly.js and Recharts for rendering
-
-#### 6. **Graceful Degradation**
-- Memory features are optional (works without Supermemory API key)
-- Error handling ensures the system continues to function even if individual components fail
-- Always returns consistent response structures
+**Context Awareness** → Maintains conversation context for natural follow-up queries
 
 ### Technology Stack
 
@@ -372,81 +332,86 @@ The frontend will be available at `http://localhost:5173`
 
 Open your browser and navigate to `http://localhost:5173`
 
-### 5. Taking Screenshots for Documentation
 
-To add screenshots to the README:
+## Quick Start
 
-1. Create a `docs/screenshots/` directory:
-   ```bash
-   mkdir -p docs/screenshots
-   ```
+Once the application is running, you can start querying your data immediately:
 
-2. Take screenshots of key features:
-   - Main interface (light mode)
-   - Query results with visualizations
-   - Dark mode interface
-   - Export menu
-   - AI insights panel
-   - Example queries in action
+### Example Queries
 
-3. Name the screenshots descriptively (e.g., `main-interface.png`, `dark-mode.png`)
+**Analytical Queries:**
+- `"Top 10 sellers by number of orders"`
+- `"Show me the highest priced products"`
+- `"What are the total sales by state?"`
 
-4. Update the screenshot paths in the README if needed
+**Semantic Search:**
+- `"Find products with good reviews"`
+- `"Show me reliable sellers"`
+- `"Products with quality issues"`
 
-## Usage
+**Definitions & Tools:**
+- `"What is boleto?"`
+- `"Translate this to English"`
 
-1. **Start a Query**: Type or speak a question about the e-commerce data
-   - Example: "Top 5 highest products"
-   - Example: "Show me products with good reviews"
-   - Example: "What is boleto?"
+### Using the Interface
 
-2. **View Results**: The system will:
-   - Classify your query
-   - Execute the appropriate handler
-   - Display results in a chat interface
-   - Generate an appropriate visualization
-
-3. **Follow-up Queries**: Ask follow-up questions that reference previous queries
-   - Example: After asking about "good reviews", ask "what about bad reviews?"
+1. **Type or Speak** - Enter your query in the chat panel or use the microphone icon
+2. **View Results** - See your data visualized with interactive charts
+3. **Explore Insights** - Review AI-generated insights and recommendations
+4. **Export Data** - Download results in your preferred format
+5. **Toggle Theme** - Switch between light and dark mode for comfortable viewing
 
 ## Project Structure
 
 ```
 QueryMind/
-├── backend/              # FastAPI backend
-│   ├── main.py          # FastAPI app and API endpoints
-│   ├── orchestrator.py  # LangGraph workflow definition
-│   ├── database.py      # Database connection and queries
-│   ├── vector_store.py  # ChromaDB semantic search
-│   ├── memory.py        # Supermemory integration
-│   └── tools.py         # External tools (Wikipedia, definitions)
-├── frontend/            # React frontend
+├── backend/                    # FastAPI backend
+│   ├── main.py                # API endpoints
+│   ├── orchestrator.py        # LangGraph workflow
+│   ├── database.py            # PostgreSQL integration
+│   ├── vector_store.py        # ChromaDB semantic search
+│   ├── memory.py              # Conversation memory
+│   └── tools.py               # External APIs
+│
+├── frontend/                   # React + TypeScript
 │   ├── src/
-│   │   ├── App.tsx      # Main application component
+│   │   ├── App.tsx            # Main component
 │   │   ├── components/
-│   │   │   ├── VizRenderer.tsx    # Visualization component
-│   │   │   ├── VoiceInput.tsx     # Voice input component
-│   │   │   └── UserGuide.tsx      # User guide modal
-│   │   └── lib/         # Utility functions
-├── database/            # Database setup scripts
-│   ├── schema.sql       # Database schema
-│   ├── setup_schema.py  # Schema creation script
-│   ├── load_data.py     # Data loading script
-│   └── build_vector_db.py  # Vector DB creation
-├── data/                # CSV data files
-├── chroma_db/           # ChromaDB storage (generated)
-└── requirements.txt     # Python dependencies
+│   │   │   ├── VizRenderer.tsx    # Charts & visualizations
+│   │   │   ├── InsightsPanel.tsx  # AI insights display
+│   │   │   ├── VoiceInput.tsx     # Voice recognition
+│   │   │   └── UserGuide.tsx      # Interactive guide
+│   │   ├── contexts/
+│   │   │   └── ThemeContext.tsx   # Dark mode support
+│   │   └── utils/
+│   │       └── exportUtils.ts     # Export functionality
+│
+├── database/                   # Setup scripts
+│   ├── schema.sql
+│   ├── setup_schema.py
+│   ├── load_data.py
+│   └── build_vector_db.py
+│
+├── docs/                       # Documentation
+│   └── screenshots/            # App screenshots
+│
+├── data/                       # CSV data files
+├── chroma_db/                  # Vector database (generated)
+└── requirements.txt            # Python dependencies
 ```
 
-## API Endpoints
+## API Reference
 
-### POST `/api/chat/query`
-Process a natural language query.
+### Query Endpoint
 
-**Request:**
+**POST** `/api/chat/query`
+
+Process a natural language query and return results with visualization configuration and insights.
+
+**Request Body:**
 ```json
 {
-  "message": "Top 5 highest products",
+  "message": "Top 10 sellers by number of orders",
   "conversation_id": "default",
   "user_id": "default"
 }
@@ -455,23 +420,30 @@ Process a natural language query.
 **Response:**
 ```json
 {
-  "query": "Top 5 highest products",
+  "query": "Top 10 sellers by number of orders",
   "intent": "analytical",
-  "sql_query": "SELECT ...",
-  "results": [...],
+  "sql_query": "SELECT seller_id, COUNT(*) as num_orders...",
+  "results": [
+    {"seller_id": "...", "num_orders": 1854},
+    ...
+  ],
   "visualization_config": {
     "type": "bar",
-    "x_axis": "product_id",
-    "y_axis": "highest_price"
+    "x_axis": "seller_id",
+    "y_axis": "num_orders"
   },
-  "message": "Found 5 results for your query."
+  "insights": "• Concentrated Market Leadership: Top 3 sellers...",
+  "message": "Found 10 results for your query."
 }
 ```
 
-### POST `/api/translate`
-Translate text to English.
+### Translation Endpoint
 
-**Request:**
+**POST** `/api/translate`
+
+Translate Portuguese text to English.
+
+**Request Body:**
 ```json
 {
   "text": "produtos com boas avaliações"
@@ -485,85 +457,32 @@ Translate text to English.
 }
 ```
 
-## Future Improvements
+## Key Highlights
 
-If you had more time to spend on this project, here are some recommended enhancements:
+- **Intelligent Query Processing** - Automatically routes queries to the right handler based on intent
+- **Smart Visualizations** - AI-powered chart selection and generation
+- **Actionable Insights** - Get professional business insights from your data
+- **Dark Mode** - Beautiful dark theme for comfortable viewing
+- **Export Options** - Download results in CSV, JSON, PNG, or PDF formats
+- **Voice Input** - Speak your queries naturally
+- **Multi-language** - Supports Portuguese to English translation
 
-### 1. **Enhanced Query Understanding**
-- Implement query refinement: allow users to clarify ambiguous queries
-- Add support for multi-step analytical queries (e.g., "compare sales this month vs last month")
-- Better handling of complex aggregations and time-series queries
+## Built With
 
-### 2. **Advanced Visualizations**
-- Add more chart types: scatter plots, heatmaps, geographic visualizations
-- Interactive charts with drill-down capabilities
-- Customizable visualization parameters (colors, axes, etc.)
-- Export visualizations as images or PDFs
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
+- [LangGraph](https://github.com/langchain-ai/langgraph) - Workflow orchestration
+- [React](https://react.dev/) - UI framework
+- [PostgreSQL](https://www.postgresql.org/) - Relational database
+- [ChromaDB](https://www.trychroma.com/) - Vector database
+- [Google Gemini](https://deepmind.google/technologies/gemini/) - LLM for query understanding
+- [OpenAI](https://openai.com/) - Text embeddings
+- [Plotly.js](https://plotly.com/javascript/) & [Recharts](https://recharts.org/) - Data visualization
 
-### 3. **Performance Optimizations**
-- Implement query result caching for frequently asked questions
-- Add database query optimization and indexing strategies
-- Implement pagination for large result sets
-- Add streaming responses for long-running queries
+## Data Source
 
-### 4. **User Experience**
-- Add query history and saved queries
-- Implement user authentication and multi-user support
-- Add query suggestions/autocomplete
-- Improve error messages with actionable suggestions
-- Add dark mode support
+This project uses the [Olist Brazilian E-commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce), which contains real e-commerce data from Brazilian orders.
 
-### 5. **Data Quality & Validation**
-- Add SQL query validation before execution
-- Implement query result validation and sanitization
-- Add data quality checks and warnings
-- Better handling of NULL values and edge cases
+---
 
-### 6. **Advanced Features**
-- Support for custom SQL queries (with safety checks)
-- Add data export functionality (CSV, JSON, Excel)
-- Implement query templates for common use cases
-- Add scheduled queries and alerts
-- Support for multiple databases/data sources
-
-### 7. **Testing & Reliability**
-- Add comprehensive unit tests for all agents
-- Integration tests for the full workflow
-- End-to-end tests for the frontend
-- Load testing and performance benchmarking
-- Better error logging and monitoring
-
-### 8. **Documentation**
-- Add API documentation with Swagger/OpenAPI
-- Create user documentation with examples
-- Add developer documentation for extending the system
-- Document the database schema and relationships
-
-### 9. **Deployment**
-- Docker containerization for easy deployment
-- CI/CD pipeline setup
-- Production-ready configuration management
-- Environment-specific configurations (dev, staging, prod)
-
-### 10. **Security**
-- Add rate limiting to prevent abuse
-- Implement SQL injection prevention (already partially done, but can be enhanced)
-- Add authentication and authorization
-- Secure API key management
-- Input sanitization and validation
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-[Add your license here]
-
-## Acknowledgments
-
-- Olist for providing the Brazilian e-commerce dataset
-- LangChain/LangGraph for workflow orchestration
-- Google Gemini for LLM capabilities
-- OpenAI for embedding models
+**QueryMind** - Transform your data into insights with natural language queries.
 
