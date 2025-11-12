@@ -12,7 +12,6 @@ QueryMind is an intelligent data analytics application that allows users to quer
 ![Query Results](docs/screenshots/query-results.png)
 *Example query results showing interactive bar charts and data insights*
 
-> **Note:** Additional screenshots (dark mode, export menu, AI insights) can be added to showcase more features. See `docs/screenshots/README.md` for guidance on taking and adding more screenshots.
 
 ## Features
 
