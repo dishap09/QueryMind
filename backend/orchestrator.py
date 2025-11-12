@@ -581,7 +581,7 @@ Return only the JSON object, no additional text or markdown formatting."""
         # Call the appropriate tool function
         if tool_name == 'wikipedia_lookup':
             topic = parameters.get('topic', '')
-            result_text = wikipedia_lookup(topic)
+            result_text = await wikipedia_lookup(topic)
         elif tool_name == 'get_definition':
             term = parameters.get('term', '')
             result_text = await get_definition(term)
