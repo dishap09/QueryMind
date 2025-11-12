@@ -2,6 +2,18 @@
 
 QueryMind is an intelligent data analytics application that allows users to query a Brazilian e-commerce database using natural language. The system intelligently routes queries to appropriate handlers (SQL generation, semantic search, or external tools) and automatically generates visualizations based on the results.
 
+## Screenshots
+
+### Main Interface
+![QueryMind Main Interface](docs/screenshots/main-interface.png)
+*The main QueryMind interface showing the chat panel, visualization panel, and AI-generated insights*
+
+### Query Results with Visualization
+![Query Results](docs/screenshots/query-results.png)
+*Example query results showing interactive bar charts and data insights*
+
+> **Note:** Additional screenshots (dark mode, export menu, AI insights) can be added to showcase more features. See `docs/screenshots/README.md` for guidance on taking and adding more screenshots.
+
 ## Features
 
 - **Natural Language Querying**: Ask questions in plain English about your data
@@ -17,21 +29,193 @@ QueryMind is an intelligent data analytics application that allows users to quer
 
 ### System Overview
 
-QueryMind follows a microservices-inspired architecture with clear separation between frontend, backend, and data layers:
+QueryMind follows a microservices-inspired architecture with clear separation between frontend, backend, and data layers. The system uses LangGraph for intelligent workflow orchestration, routing queries through specialized agents based on intent classification.
 
 ```
-┌─────────────┐      ┌──────────────┐      ┌─────────────┐
-│   Frontend  │─────▶│   FastAPI    │─────▶│ PostgreSQL  │
-│  (React)    │      │   Backend    │      │  Database   │
-└─────────────┘      └──────────────┘      └─────────────┘
-                            │
-                            ├─────▶ ChromaDB (Vector Store)
-                            │
-                            ├─────▶ Google Gemini (LLM)
-                            │
-                            ├─────▶ OpenAI (Embeddings)
-                            │
-                            └─────▶ Supermemory (Memory)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              USER INTERFACE LAYER                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        React Frontend (TypeScript)                   │   │
+│  ├─────────────────────────────────────────────────────────────────────┤   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │   │
+│  │  │ Chat Panel   │  │ Viz Panel    │  │  Insights Panel          │  │   │
+│  │  │              │  │              │  │  (AI-Generated)          │  │   │
+│  │  │ • Messages   │  │ • Charts     │  │                          │  │   │
+│  │  │ • Voice Input│  │ • Tables     │  │ • Pattern Analysis       │  │   │
+│  │  │ • Examples   │  │ • Export     │  │ • Trend Detection        │  │   │
+│  │  │              │  │   (CSV/JSON/ │  │ • Recommendations        │  │   │
+│  │  │              │  │    PNG/PDF)  │  │                          │  │   │
+│  │  └──────────────┘  └──────────────┘  └──────────────────────────┘  │   │
+│  │                                                                       │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐   │   │
+│  │  │              Theme Toggle (Light/Dark Mode)                  │   │   │
+│  │  └──────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                                    │ HTTP/REST API                           │
+│                                    ▼                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            API GATEWAY LAYER                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    FastAPI Backend (Python)                          │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐   │   │
+│  │  │  POST /api/chat/query  │  POST /api/translate                │   │   │
+│  │  └──────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                                    │ LangGraph Workflow                      │
+│                                    ▼                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        WORKFLOW ORCHESTRATION LAYER                          │
+│                          (LangGraph State Machine)                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                         Query Entry Point                            │   │
+│  │                    (Initial State Creation)                          │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    INTENT CLASSIFIER AGENT                           │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐   │   │
+│  │  │  Uses Google Gemini to classify query into:                  │   │   │
+│  │  │  • analytical  → SQL queries needed                          │   │   │
+│  │  │  • semantic    → Vector search needed                        │   │   │
+│  │  │  • tool        → External API needed                         │   │   │
+│  │  │  • conversational → General chat                             │   │   │
+│  │  └──────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                    ┌───────────────┼───────────────┐                        │
+│                    │               │               │                        │
+│                    ▼               ▼               ▼                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  ANALYTICAL  │  │   SEMANTIC   │  │     TOOL     │  │CONVERSATIONAL│  │
+│  │    AGENT     │  │    AGENT     │  │    AGENT     │  │    AGENT     │  │
+│  ├──────────────┤  ├──────────────┤  ├──────────────┤  ├──────────────┤  │
+│  │ 1. Enhance   │  │ 1. Enhance   │  │ 1. Enhance   │  │ 1. Enhance   │  │
+│  │    Query     │  │    Query     │  │    Query     │  │    Query     │  │
+│  │    (Memory)  │  │    (Memory)  │  │    (Memory)  │  │    (Memory)  │  │
+│  │              │  │              │  │              │  │              │  │
+│  │ 2. Generate  │  │ 2. Generate  │  │ 2. Call      │  │ 2. Generate  │  │
+│  │    SQL       │  │    Embedding │  │    External  │  │    Response  │  │
+│  │    (Gemini)  │  │    (OpenAI)  │  │    Tool      │  │    (Gemini)  │  │
+│  │              │  │              │  │              │  │              │  │
+│  │ 3. Execute   │  │ 3. Vector    │  │              │  │              │  │
+│  │    Query     │  │    Search    │  │              │  │              │  │
+│  │    (Postgres)│  │    (ChromaDB)│  │              │  │              │  │
+│  │              │  │              │  │              │  │              │  │
+│  │ 4. Get       │  │ 4. Get       │  │              │  │              │  │
+│  │    Results   │  │    Results   │  │              │  │              │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘  │
+│         │                 │                 │                 │            │
+│         └─────────────────┴─────────────────┴─────────────────┘            │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      VISUALIZER AGENT                                │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐   │   │
+│  │  │  Analyzes results and generates visualization config:         │   │   │
+│  │  │  • Chart type (bar, line, table, map, text)                  │   │   │
+│  │  │  • Axis mappings                                             │   │   │
+│  │  │  • Color schemes                                             │   │   │
+│  │  │  Uses Google Gemini for intelligent chart selection          │   │   │
+│  │  └──────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    INSIGHTS GENERATOR AGENT                          │   │
+│  │  ┌──────────────────────────────────────────────────────────────┐   │   │
+│  │  │  Generates AI-powered insights from query results:            │   │   │
+│  │  │  • Pattern detection                                         │   │   │
+│  │  │  • Trend analysis                                            │   │   │
+│  │  │  • Anomaly identification                                    │   │   │
+│  │  │  • Actionable recommendations                                │   │   │
+│  │  │  Uses Google Gemini for professional business insights       │   │   │
+│  │  └──────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                         Response Assembly                            │   │
+│  │  Combines: results + visualization_config + insights + message      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      Update Conversation Memory                      │   │
+│  │                    (Supermemory - Optional)                          │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                         │
+│                                    ▼                                         │
+│                         Return Final State to API                           │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            DATA & SERVICE LAYER                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │ PostgreSQL   │  │  ChromaDB    │  │ Google       │  │   OpenAI     │   │
+│  │  Database    │  │  Vector Store│  │ Gemini       │  │  Embeddings  │   │
+│  ├──────────────┤  ├──────────────┤  ├──────────────┤  ├──────────────┤   │
+│  │ • Products   │  │ • Product    │  │ • Intent     │  │ • Text       │   │
+│  │ • Orders     │  │   Embeddings │  │   Classify   │  │   Embeddings │   │
+│  │ • Sellers    │  │ • Semantic   │  │ • SQL Gen    │  │ • Semantic   │   │
+│  │ • Customers  │  │   Search     │  │ • Viz Config │  │   Search     │   │
+│  │ • Reviews    │  │ • Similarity │  │ • Insights   │  │   Support    │   │
+│  │ • Payments   │  │   Matching   │  │ • Chat       │  │              │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
+│                                                                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                      │
+│  │ Supermemory  │  │  Wikipedia   │  │ Translation  │                      │
+│  │   (Memory)   │  │    API       │  │   Services   │                      │
+│  ├──────────────┤  ├──────────────┤  ├──────────────┤                      │
+│  │ • Context    │  │ • Definitions│  │ • PT → EN    │                      │
+│  │ • History    │  │ • Knowledge  │  │ • Multi-lang │                      │
+│  │ • Follow-ups │  │   Base       │  │   Support    │                      │
+│  └──────────────┘  └──────────────┘  └──────────────┘                      │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            DATA FLOW EXAMPLE                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  User Query: "Show me top 10 sellers by number of orders"                    │
+│                                                                               │
+│  1. Frontend → POST /api/chat/query                                          │
+│  2. FastAPI → Create initial QueryState                                      │
+│  3. Intent Classifier → "analytical"                                         │
+│  4. Analytical Agent:                                                        │
+│     a. Enhance query with memory context (if available)                      │
+│     b. Generate SQL: "SELECT seller_id, COUNT(*) as num_orders..."          │
+│     c. Execute query → PostgreSQL                                            │
+│     d. Retrieve results: [{seller_id: "...", num_orders: 1854}, ...]        │
+│  5. Visualizer Agent → Analyze results → Generate config:                    │
+│     {type: "bar", x_axis: "seller_id", y_axis: "num_orders"}                │
+│  6. Insights Generator → Analyze patterns → Generate insights:               │
+│     "• Concentrated Market Leadership: Top 3 sellers account for..."         │
+│  7. Update memory with conversation context                                  │
+│  8. Return complete state to frontend                                        │
+│  9. Frontend renders:                                                        │
+│     • Chat message with results count                                        │
+│     • Bar chart visualization                                                │
+│     • AI-generated insights panel                                            │
+│     • Export options (CSV, JSON, PNG, PDF)                                   │
+│                                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Design Decisions
@@ -187,6 +371,27 @@ The frontend will be available at `http://localhost:5173`
 ### 4. Access the Application
 
 Open your browser and navigate to `http://localhost:5173`
+
+### 5. Taking Screenshots for Documentation
+
+To add screenshots to the README:
+
+1. Create a `docs/screenshots/` directory:
+   ```bash
+   mkdir -p docs/screenshots
+   ```
+
+2. Take screenshots of key features:
+   - Main interface (light mode)
+   - Query results with visualizations
+   - Dark mode interface
+   - Export menu
+   - AI insights panel
+   - Example queries in action
+
+3. Name the screenshots descriptively (e.g., `main-interface.png`, `dark-mode.png`)
+
+4. Update the screenshot paths in the README if needed
 
 ## Usage
 
