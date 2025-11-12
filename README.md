@@ -2,6 +2,14 @@
 
 QueryMind is an intelligent data analytics application that allows users to query a Brazilian e-commerce database using natural language. The system intelligently routes queries to appropriate handlers (SQL generation, semantic search, or external tools) and automatically generates visualizations based on the results.
 
+## Demo Video
+
+Watch the demo video to see QueryMind in action:
+
+[![QueryMind Demo Video](https://img.shields.io/badge/Video-Demo-red?style=for-the-badge)](https://drive.google.com/file/d/1vjzuEZocFP4Sz55m6k8yAXIO636-HsV8/view?usp=sharing)
+
+[View Demo Video on Google Drive](https://drive.google.com/file/d/1vjzuEZocFP4Sz55m6k8yAXIO636-HsV8/view?usp=sharing)
+
 ## Features
 
 ### Core Capabilities
@@ -28,7 +36,7 @@ QueryMind is an intelligent data analytics application that allows users to quer
 - ChromaDB: Vector database for semantic search
 - Google Gemini: LLM for query understanding and SQL generation
 - OpenAI: Text embeddings for semantic search
-- Supermemory: Conversation memory management
+- Supermemory.ai: Conversation memory management
 - asyncpg: Async PostgreSQL driver
 
 **Frontend:**
