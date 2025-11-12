@@ -2,9 +2,35 @@
 
 QueryMind is an intelligent data analytics application that allows users to query a Brazilian e-commerce database using natural language. The system intelligently routes queries to appropriate handlers (SQL generation, semantic search, or external tools) and automatically generates visualizations based on the results.
 
+## Table of Contents
+
+- [Demo Video](#demo-video)
+- [Features](#features)
+  - [Core Capabilities](#core-capabilities)
+  - [User Experience](#user-experience)
+- [Technology Stack](#technology-stack)
+- [Screenshots](#screenshots)
+  - [Main Interface](#main-interface)
+  - [Query Results with Visualization](#query-results-with-visualization)
+- [Architecture](#architecture)
+  - [System Overview](#system-overview)
+  - [How It Works](#how-it-works)
+- [Prerequisites](#prerequisites)
+- [Setup Instructions](#setup-instructions)
+- [Quick Start](#quick-start)
+  - [Example Queries](#example-queries)
+  - [Using the Interface](#using-the-interface)
+- [Project Structure](#project-structure)
+- [API Reference](#api-reference)
+  - [Query Endpoint](#query-endpoint)
+  - [Translation Endpoint](#translation-endpoint)
+- [Key Highlights](#key-highlights)
+- [Future Enhancements](#future-enhancements)
+- [Built With](#built-with)
+- [Data Source](#data-source)
+
 ## Demo Video
 
-Watch the demo video to see QueryMind in action:
 
 [![QueryMind Demo Video](https://img.shields.io/badge/Video-Demo-red?style=for-the-badge)](https://drive.google.com/file/d/1vjzuEZocFP4Sz55m6k8yAXIO636-HsV8/view?usp=sharing)
 
